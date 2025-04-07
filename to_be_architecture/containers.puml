@@ -1,0 +1,49 @@
+@startuml WarmHouseMicroservicesContainers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "Пользователь", "Управляет умным домом, просматривает телеметрию")
+
+System_Boundary(microservices, "Система 'Тёплый Дом' (Микросервисы)") {
+    Container(api_gateway, "API Gateway", "Любой, с чем работала комаанда разработки","Единая точка входа для всех запросов")
+
+    Container(device_registration, "Device Registration", "Spring Boot", "Регистрация новых устройств")
+    ContainerDb(device_registration_db, "Device DB", "PostgreSQL", "Хранит метаданные устройств")
+
+    Container(device_manager, "Device Manager", "Spring Boot", "Управление состояниями устройств")
+    ContainerDb(device_manager_db, "Device State DB", "PostgreSQL", "Текущие состояния устройств")
+
+    Container(telemetry_service, "Telemetry Service", "Spring Boot", "Приём и хранение телеметрии")
+    ContainerDb(telemetry_db, "Telemetry DB", "Redis", "Хранение real-time телеметрии")
+
+    Container(scenarios_service, "User Scenarios", "Spring Boot", "Выполнение пользовательских сценариев")
+    ContainerDb(scenarios_db, "Scenarios DB", "PostgreSQL", "Правила сценариев")
+
+    ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Асинхронная коммуникация между сервисами")
+}
+
+System_Ext(sensor, "Датчики", "Физическое устройство, передающее телеметрию")
+System_Ext(heating_control_panel, "Интерфейс управления умным домом", "Любой интерфейс с возможностью управления устройствами умного дома и отображения телеметрии")
+System_Ext(controller, "Контроллер управления устройствами - Hub", "Физическое устройство управляющее работой умного дома")
+
+Rel(user, heating_control_panel, "Управление/просмотр телеметрии")
+Rel(heating_control_panel, api_gateway, "Запросы управления", "HTTP/REST")
+Rel(sensor, api_gateway, "Отправка телеметрии", "HTTP/PUT")
+Rel(device_manager, api_gateway, "Команда на устройство через hub", "HTTP/REST")
+Rel_R(api_gateway, controller, "Команда на устройство через hub", "HTTP/REST")
+
+Rel(api_gateway, device_registration, "Регистрация/поиск устройств", "HTTP/REST")
+Rel(api_gateway, device_manager, "Управление устройствами", "HTTP/REST")
+Rel(api_gateway, telemetry_service, "Запись/чтение телеметрии", "HTTP/REST")
+Rel(api_gateway, scenarios_service, "Запуск сценариев", "HTTP/REST")
+
+Rel(device_registration, kafka, "Событие: новое устройство")
+Rel(kafka, device_manager, "Событие: изменение состояния")
+Rel(telemetry_service, kafka, "Событие: новая телеметрия")
+Rel(scenarios_service, kafka, "Событие: изменение состояния устройств")
+
+Rel(device_registration, device_registration_db, "CRUD", "JDBC")
+Rel(device_manager, device_manager_db, "Состояния устройств", "JDBC")
+Rel(telemetry_service, telemetry_db, "Телеметрия", "CRUD")
+Rel(scenarios_service, scenarios_db, "Правила сценариев", "JDBC")
+
+@enduml

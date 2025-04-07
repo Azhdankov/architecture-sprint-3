@@ -1,0 +1,26 @@
+@startuml DeviceRegistrationComponents
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+System_Boundary(device_registration_boundary, "Регистрация устройств") {
+    ContainerDb(device_registration_db, "Device DB", "PostgreSQL", "Метаданные устройств")
+    ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Взаимодействие между микросервисами")
+
+    Component(device_in, "Device in controller", "Spring REST Controller", "Принимает HTTP-запросы от API Gateway")
+    Component(device_out, "Device out controller", "Component", "Коннекторы к внешним системам")
+    Component(device_service, "Device Service", "Spring Service", "Логика регистрации/обновления/удаления устройств")
+    Component(device_repository, "Device Repository", "Spring Data JPA", "Работа с PostgreSQL")
+    Component(kafka_producer, "Kafka Producer", "Spring Kafka", "Отправка событий об изменении устройств")
+}
+
+Container(api_gateway, "API Gateway", "Любой, с чем работала комаанда разработки", "Единая точка входа")
+
+Rel_R(api_gateway, device_in, "POST/PUT/GET/DELETE", "HTTP/REST/JSON")
+
+Rel(device_in, device_service, "Регистрация/удаление/обновление устройства", "Java")
+Rel(device_service, device_repository, "Сохранение в БД", "JPA/Hibernate")
+Rel(device_repository, device_registration_db, "INSERT/UPDATE/DELETE", "JDBC")
+Rel(device_service, device_out, "Вызов создания события для kafka", "Java")
+Rel(device_out, kafka_producer, "Отправить событие")
+Rel(kafka_producer, kafka, "Событие: device_registered", "Kafka Protocol")
+
+@enduml

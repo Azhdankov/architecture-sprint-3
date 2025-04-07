@@ -1,0 +1,30 @@
+@startuml DeviceStateManagerComponents
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+System_Boundary(device_manager_boundary, "Управление устройствами") {
+    ContainerDb(device_state_db, "Device State DB", "PostgreSQL", "Текущие состояния устройств")
+    ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Взаимодействие между микросервисами")
+
+    Component(state_in, "State in controller", "Spring REST Controller", "Принимает HTTP-запросы от API Gateway")
+    Component(state_out, "State out controller", "Component", "Коннекторы к внешним системам")
+    Component(state_service, "State Service", "Spring Service", "Логика управления состояниями")
+    Component(state_repository, "State Repository", "Spring Data JPA", "Работа с PostgreSQL")
+    Component(kafka_consumer, "Kafka Consumer", "Spring Kafka", "Обработка входящих событий")
+}
+
+Container(api_gateway, "API Gateway", "Любой, с чем работала команда разработки", "Единая точка входа")
+
+Rel(api_gateway, state_in, "POST/PUT/GET/DELETE", "HTTP/REST/JSON")
+
+Rel(state_in, state_service, "Изменение состояния устройства", "Java")
+Rel(state_service, state_repository, "Сохранение состояния", "JPA/Hibernate")
+Rel(state_repository, device_state_db, "INSERT/UPDATE/DELETE операции", "JDBC")
+Rel(state_service, state_out, "Вызов создания события", "Java")
+Rel(kafka, kafka_consumer, "Событие: device_registered", "Kafka Listener")
+Rel(kafka, kafka_consumer, "Событие: telemetry_management", "Kafka Listener")
+Rel(kafka, kafka_consumer, "Событие: scenario_triggered", "Kafka Listener")
+Rel(kafka_consumer, state_service, "Обработка события", "Java")
+Rel(state_service, state_out, "Управление устройствами после обработки событий", "Java")
+
+Rel(state_out, api_gateway, "Отправить команду на Hub", "HTTP/REST")
+@enduml

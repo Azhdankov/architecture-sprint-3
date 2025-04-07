@@ -1,0 +1,61 @@
+@startuml WarmHouseERDiagram
+
+hide circle
+skinparam linetype ortho
+
+entity Device {
+  * id : UUID <<PK>>
+  --
+  * type : String
+  * customerId : UUID
+  * isSensor : Boolean
+}
+
+entity DeviceState {
+  * id : UUID <<PK>>
+  --
+  * deviceId : UUID <<FK>>
+  * type : String
+  * state : State
+  * isOn : Boolean
+}
+
+entity Telemetry {
+  * deviceId : UUID
+  --
+  * state : State
+  * timestamp : DateTime
+}
+
+entity UserScenario {
+  * id : UUID <<PK>>
+  --
+  * customerId : UUID
+  * description : String
+  * isActive : Boolean
+}
+
+entity RelationDevices {
+  * id : UUID <<PK>>
+  --
+  * deviceId : UUID <<FK>>
+  * scenarioId : UUID <<FK>>
+}
+
+Device ||--o| DeviceState
+Device ||--o| Telemetry
+Device ||--o{ RelationDevices
+UserScenario |o--o{ RelationDevices
+
+' Нотации
+note right of DeviceState::deviceId
+  One-to-one or one-to-zero relationship
+  with Device.id
+end note
+
+note right of Telemetry::deviceId
+  One-to-one or one-to-zero relationship
+  with Device.id
+end note
+
+@enduml

@@ -1,0 +1,16 @@
+@startuml WarmHouseSystemContext
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "Пользователь", "Управляет умным домом, просматривает телеметрию")
+
+System(warm_house, "Тёплый Дом", "Приложение для просмотра телеметрии, управление устройствами")
+System_Ext(sensor, "Датчики", "Физическое устройство, передающее информацию о состоянии дома")
+System_Ext(heating_control_panel, "Интерфейс управления умным домом", "Любой интерфейс с возможностью управления устройствами умного дома и отображения телеметрии")
+System_Ext(controller, "Контроллер управления устройствами - Hub", "Физическое устройство управляющее работой умного дома")
+
+Rel(heating_control_panel, warm_house, "Управление отоплением/запрос телеметрии")
+Rel(user, heating_control_panel, "Управление отоплением/просмотр телеметрии")
+Rel(sensor, warm_house, "Передача информации о состоянии дома")
+Rel(warm_house, controller, "Изменение состояния устройства умного дома")
+
+@enduml
