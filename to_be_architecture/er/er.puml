@@ -1,0 +1,74 @@
+@startuml WarmHouseDataModel
+
+class User {
+    + UUID id <<PK>>
+    + String email
+    + String name
+    + String surname
+    + String phoneNumber
+    + String contractNumber
+    + String managerId
+}
+
+class Home {
+    + UUID id <<PK>>
+    + UUID homeId
+    + UUID customerId <<FK>>
+    + String hubIp
+}
+
+class Device {
+    + UUID id <<PK>>
+    + UUID homeId <<FK>>
+    + String type
+    + State state
+    + Boolean isAvailable
+    + String hubIp
+}
+
+class Sensor {
+    + UUID id <<PK>>
+    + UUID deviceId <<FK>>
+}
+
+class Telemetry {
+    + UUID id <<PK>>
+    + String state
+}
+
+class Scenario {
+    + UUID id <<PK>>
+    + UUID homeId <<FK>>
+    + String description
+    + String name
+}
+
+class ScenarioDevice {
+    + UUID id <<PK>>
+    + UUID scenarioId <<FK>>
+    + UUID deviceId <<FK>>
+    + SequenceAction sequenceAction
+}
+
+User "1" -- "0..*" Home : "has"
+Home "1" -- "0..*" Device : "contains"
+Device "1" -- "0..*" Sensor : "has "
+Device "1" -- "0..*" Telemetry : "produces"
+Home "1" -- "0..*" Scenario : "has"
+Scenario "1" -- "0..*" ScenarioDevice : "controls"
+ScenarioDevice "1" -- "1" Device : "manages"
+
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor White
+    ArrowColor #2C3E50
+    BorderColor #2C3E50
+}
+skinparam arrow {
+    Color #2C3E50
+    Thickness 2
+}
+
+@enduml

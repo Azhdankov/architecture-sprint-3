@@ -1,0 +1,144 @@
+@startuml DeviceManagerSequenceDiagram
+
+participant "API Gateway" as api_gateway
+participant "State In\nController" as state_in
+participant "State Service" as state_service
+participant "State Repository" as state_repo
+participant "Device State DB" as device_db
+participant "Scenario Out\nController" as scenario_out
+participant "Kafka Producer" as kafka_producer
+participant "Kafka" as kafka
+participant "Kafka Consumer" as kafka_consumer
+
+== Добавление нового устройства ==
+
+api_gateway -> state_in : POST /device (Данные устройства)
+activate state_in
+
+state_in -> state_service : Создать устройство
+activate state_service
+
+state_service -> state_repo : Сохранить устройство
+activate state_repo
+state_repo -> device_db : INSERT
+activate device_db
+device_db --> state_repo : Успешно
+deactivate device_db
+state_repo --> state_service : Устройство создано
+deactivate state_repo
+
+
+
+state_service --> state_in : 201 Created
+deactivate state_service
+state_in --> api_gateway : HTTP Response
+deactivate state_in
+
+== Изменение состояния от датчика (через Kafka) ==
+
+kafka -> kafka_consumer : Событие ChangingState
+activate kafka_consumer
+
+kafka_consumer -> state_service : Обработать изменение
+activate state_service
+
+alt Требуется изменение устройства
+    state_service -> state_repo : Обновить состояние
+    activate state_repo
+    state_repo -> device_db : UPDATE
+    activate device_db
+    device_db --> state_repo : Успешно
+    deactivate device_db
+    state_repo --> state_service : Состояние обновлено
+    deactivate state_repo
+
+    state_service -> scenario_out : Подготовить ChangingDeviceState
+    activate scenario_out
+    scenario_out -> kafka_producer : Отправить событие
+    activate kafka_producer
+    kafka_producer -> kafka : ChangingDeviceState
+    activate kafka
+    deactivate kafka
+    kafka_producer --> scenario_out : Событие отправлено
+    deactivate kafka_producer
+    scenario_out --> state_service : Событие отправлено
+    deactivate scenario_out
+else Не требует изменения
+    state_service --> kafka_consumer : Пропустить
+end
+
+state_service --> kafka_consumer : Обработка завершена
+deactivate state_service
+kafka_consumer --> kafka : Commit offset
+deactivate kafka_consumer
+
+== Обработка сценария (из Kafka) ==
+
+kafka -> kafka_consumer : Событие ChangeStateFromScenario
+activate kafka_consumer
+
+kafka_consumer -> state_service : Обработать сценарий
+activate state_service
+
+state_service -> state_repo : Проверить доступность
+activate state_repo
+state_repo -> device_db : SELECT isAvailable
+activate device_db
+device_db --> state_repo : true/false
+deactivate device_db
+state_repo --> state_service : Результат
+deactivate state_repo
+
+alt Устройство доступно
+    state_service -> state_repo : Обновить состояние
+    activate state_repo
+    state_repo -> device_db : UPDATE
+    activate device_db
+    device_db --> state_repo : Успешно
+    deactivate device_db
+    state_repo --> state_service : Состояние обновлено
+    deactivate state_repo
+
+    state_service -> scenario_out : Подготовить ChangeDeviceStateFromScenario
+    activate scenario_out
+    scenario_out -> kafka_producer : Отправить событие
+    activate kafka_producer
+    kafka_producer -> kafka : ChangeDeviceStateFromScenario
+    activate kafka
+    deactivate kafka
+    kafka_producer --> scenario_out : Событие отправлено
+    deactivate kafka_producer
+    scenario_out --> state_service : Событие отправлено
+    deactivate scenario_out
+else Устройство недоступно
+    state_service --> kafka_consumer : Пропустить
+end
+
+state_service --> kafka_consumer : Обработка завершена
+deactivate state_service
+kafka_consumer --> kafka : Commit offset
+deactivate kafka_consumer
+
+== Обработка ошибки устройства (от API Gateway) ==
+
+api_gateway -> state_in : PUT /device/{id} (Ошибка)
+activate state_in
+
+state_in -> state_service : Обновить статус устройства
+activate state_service
+
+state_service -> state_repo : Пометить как недоступное
+activate state_repo
+state_repo -> device_db : UPDATE isAvailable=false
+activate device_db
+device_db --> state_repo : Успешно
+deactivate device_db
+state_repo --> state_service : Статус обновлен
+deactivate state_repo
+
+state_service --> state_in : 200 OK
+deactivate state_service
+state_in --> api_gateway : HTTP Response
+deactivate state_in
+
+@enduml

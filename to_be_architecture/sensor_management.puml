@@ -1,0 +1,26 @@
+@startuml DeviceStateManagerComponents
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+System_Boundary(sensor_management_boundary, "Управление сенсорами") {
+    ContainerDb(sensor_management_db, "Sensor DB", "PostgreSQL", "Хранит связь сенсоров с устройствами")
+
+    Component(sensor_in, "Sensor in controller", "Spring REST Controller", "Принимает HTTP-запросы от API Gateway")
+    Component(sensor_service, "Sensor Service", "Spring Service", "Логика управления сенсорами")
+    Component(sensor_repository, "Sensor Repository", "Spring Data JPA", "Работа с PostgreSQL")
+    Component(sensor_out, "Sensor out controller", "Component", "Коннекторы к внешним системам")
+    Component(kafka_producer, "Kafka Producer", "Spring Kafka", "Отправка событий")
+}
+
+ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Взаимодействие между микросервисами")
+Container(api_gateway, "API Gateway", "Любой, с чем работала команда разработки", "Единая точка входа")
+
+Rel(api_gateway, sensor_in, "POST/PUT/GET/DELETE", "HTTP/REST/JSON")
+
+Rel(sensor_in, sensor_service, "Логика управление сенсором", "Java")
+Rel(sensor_service, sensor_repository, "Сохранение/чтение метаданных", "JPA/Hibernate")
+Rel(sensor_repository, sensor_management_db, "INSERT/UPDATE/DELETE операции", "JDBC")
+Rel(sensor_service, sensor_out, "Вызов вн. системы", "Java")
+Rel(sensor_out, kafka_producer, "Отправка события", "Java")
+Rel(kafka_producer, kafka, "Отправить событие", "Kafka Protocol")
+
+@enduml

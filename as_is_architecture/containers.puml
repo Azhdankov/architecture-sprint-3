@@ -1,0 +1,21 @@
+@startuml WarmHouseContainers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "Пользователь", "Просматривает телеметрию и выставляет температуру в доме")
+
+System_Boundary(warm_house_system, "Система 'Тёплый Дом'") {
+    Container(monolith, "Монолитное Java-приложение", "Spring Boot", "Обрабатывает запросы, управляет устройствами")
+    ContainerDb(postgres, "База данных", "PostgreSQL", "Хранит настройки температуры и устройства")
+}
+
+System_Ext(sensor, "Датчик отопления", "Физическое устройство, передающее информацию о температуре")
+System_Ext(heating_control_panel, "Устройство управления отоплением", "Любой интерфейс с возможностью управления устройствами умного дома и отображения телеметрии")
+System_Ext(controller, "Контроллер отопления", "Физическое устройство управляющее мощностью работы котла")
+
+Rel(user, heating_control_panel, "Управление отоплением/просмотр телеметрии")
+Rel(sensor, monolith, "Передача информации о температуре в доме", "sync, JSON/HTTP/PUT\n/api/heating{id}")
+Rel(monolith, postgres, "Сохранение состояния/fetch данных об устройстве", "JDBC")
+Rel(controller, monolith, "Периодический запрос актуальной информации", "sync, HTTP/GET\n/api/heating{id}")
+Rel(heating_control_panel, monolith, "Управление температурой в доме/запрос телеметрии", "sync, HTTP/POST/GET \n/api/heating{id}")
+
+@enduml

@@ -1,0 +1,29 @@
+@startuml DeviceStateManagerComponents
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+System_Boundary(device_manager_boundary, "Управление устройствами") {
+    ContainerDb(device_state_db, "Device State DB", "PostgreSQL", "Текущие состояния устройств")
+
+    Component(state_in, "State in controller", "Spring REST Controller", "Принимает HTTP-запросы от API Gateway")
+    Component(state_service, "State Service", "Spring Service", "Логика управления состояниями")
+    Component(state_repository, "State Repository", "Spring Data JPA", "Работа с PostgreSQL")
+    Component(state_out, "Scenario out controller", "Component", "Коннекторы к внешним системам")
+    Component(kafka_consumer, "Kafka Consumer", "Spring Kafka", "Обработка входящих событий")
+    Component(kafka_producer, "Kafka Producer", "Spring Kafka", "Отправка событий")
+}
+
+ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Взаимодействие между микросервисами")
+Container(api_gateway, "API Gateway", "Любой, с чем работала команда разработки", "Единая точка входа")
+
+Rel(api_gateway, state_in, "POST/PUT/GET/DELETE", "HTTP/REST/JSON")
+
+Rel(state_in, state_service, "Изменение состояния устройства", "Java")
+Rel(state_service, state_repository, "Сохранение/чтение метаданных", "JPA/Hibernate")
+Rel(state_repository, device_state_db, "INSERT/UPDATE/DELETE операции", "JDBC")
+Rel(kafka, kafka_consumer, "Обработка событий", "Kafka Listener")
+Rel(kafka_consumer, state_service, "Обработка события", "Java")
+Rel(state_service, state_out, "Вызов вн. системы", "Java")
+Rel(state_out, kafka_producer, "Отправка события", "Java")
+Rel(kafka_producer, kafka, "Отправить событие", "Kafka Protocol")
+
+@enduml

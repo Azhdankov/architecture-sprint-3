@@ -1,0 +1,53 @@
+@startuml TelemetryServiceSequenceDiagram
+
+participant "API Gateway" as api_gateway
+participant "Telemetry In\nController" as telemetry_in
+participant "Telemetry Service" as telemetry_service
+participant "Telemetry Repository" as telemetry_repo
+participant "Telemetry DB (Redis)" as telemetry_db
+
+== Запись телеметрии от датчика ==
+
+api_gateway -> telemetry_in : PUT /telemetry (Данные датчика)
+activate telemetry_in
+
+telemetry_in -> telemetry_service : Сохранить телеметрию
+activate telemetry_service
+
+telemetry_service -> telemetry_repo : Записать данные
+activate telemetry_repo
+telemetry_repo -> telemetry_db : SET key value
+activate telemetry_db
+telemetry_db --> telemetry_repo : OK
+deactivate telemetry_db
+telemetry_repo --> telemetry_service : Данные сохранены
+deactivate telemetry_repo
+
+telemetry_service --> telemetry_in : 200 OK
+deactivate telemetry_service
+telemetry_in --> api_gateway : HTTP Response
+deactivate telemetry_in
+
+== Получение текущей телеметрии ==
+
+api_gateway -> telemetry_in : GET /telemetry/{sensorId}
+activate telemetry_in
+
+telemetry_in -> telemetry_service : Получить телеметрию
+activate telemetry_service
+
+telemetry_service -> telemetry_repo : Запросить данные
+activate telemetry_repo
+telemetry_repo -> telemetry_db : GET key
+activate telemetry_db
+telemetry_db --> telemetry_repo : Значение
+deactivate telemetry_db
+telemetry_repo --> telemetry_service : Данные получены
+deactivate telemetry_repo
+
+telemetry_service --> telemetry_in : 200 OK (Данные)
+deactivate telemetry_service
+telemetry_in --> api_gateway : HTTP Response
+deactivate telemetry_in
+
+@enduml
