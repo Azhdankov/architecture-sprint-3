@@ -1,16 +1,21 @@
 @startuml WarmHouseMicroservicesContainers
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
+AddRelTag("async", $textColor=$ARROW_FONT_COLOR, $lineColor=$ARROW_COLOR, $lineStyle=DashedLine(), $legendText="async call")
+
 Person(user, "Пользователь", "Управляет умным домом, просматривает телеметрию")
 
 System_Boundary(microservices, "Система 'Тёплый Дом' (Микросервисы)") {
     Container(api_gateway, "API Gateway", "Любой, с чем работала комаанда разработки","Единая точка входа для всех запросов")
 
-    Container(device_registration, "Device Registration", "Spring Boot", "Регистрация новых устройств")
-    ContainerDb(device_registration_db, "Device DB", "PostgreSQL", "Хранит метаданные устройств")
+    Container(home_management, "Home management", "Spring Boot", "Управление домом пользователя")
+    ContainerDb(home_management_db, "Home DB", "PostgreSQL", "Хранит метаданные дома пользователя")
 
-    Container(device_manager, "Device Manager", "Spring Boot", "Управление состояниями устройств")
-    ContainerDb(device_manager_db, "Device State DB", "PostgreSQL", "Текущие состояния устройств")
+    Container(sensor_management, "Управление сенсорами", "Spring Boot", "Управление домом пользователя")
+    ContainerDb(sensor_management_db, "Sensor DB", "PostgreSQL", "Хранит связь с устройствами")
+
+    Container(device_manager, "Device Manager", "Spring Boot", "Управление устройствами")
+    ContainerDb(device_manager_db, "Device DB", "PostgreSQL", "Метаданные по устройству")
 
     Container(telemetry_service, "Telemetry Service", "Spring Boot", "Приём и хранение телеметрии")
     ContainerDb(telemetry_db, "Telemetry DB", "Redis", "Хранение real-time телеметрии")
@@ -28,22 +33,25 @@ System_Ext(controller, "Контроллер управления устройс
 Rel(user, heating_control_panel, "Управление/просмотр телеметрии")
 Rel(heating_control_panel, api_gateway, "Запросы управления", "HTTP/REST")
 Rel(sensor, api_gateway, "Отправка телеметрии", "HTTP/PUT")
-Rel(device_manager, api_gateway, "Команда на устройство через hub", "HTTP/REST")
 Rel_R(api_gateway, controller, "Команда на устройство через hub", "HTTP/REST")
 
-Rel(api_gateway, device_registration, "Регистрация/поиск устройств", "HTTP/REST")
+Rel(api_gateway, home_management, "Регистрация/обновление дома", "HTTP/REST")
 Rel(api_gateway, device_manager, "Управление устройствами", "HTTP/REST")
 Rel(api_gateway, telemetry_service, "Запись/чтение телеметрии", "HTTP/REST")
-Rel(api_gateway, scenarios_service, "Запуск сценариев", "HTTP/REST")
+Rel(api_gateway, scenarios_service, "Запуск/создание/обновление сценариев", "HTTP/REST")
+Rel(api_gateway, sensor_management, "Изменение состояния датчика", "HTTP/REST")
+Rel(kafka, api_gateway, "Событие: изменение состояния на вн. систему", $tags="async")
 
-Rel(device_registration, kafka, "Событие: новое устройство")
-Rel(kafka, device_manager, "Событие: изменение состояния")
-Rel(telemetry_service, kafka, "Событие: новая телеметрия")
-Rel(scenarios_service, kafka, "Событие: изменение состояния устройств")
+Rel(kafka, device_manager, "Событие: изменение состояния устройства в hub", $tags="async")
+Rel(device_manager, kafka, "Событие: изменение состояния на вн. систему", $tags="async")
+Rel(scenarios_service, kafka, "Событие: изменение состояния устройств", $tags="async")
+Rel(home_management, kafka, "Событие: удаление дома", $tags="async")
+Rel(sensor_management, kafka, "Событие: изменение состояния датчика", $tags="async")
 
-Rel(device_registration, device_registration_db, "CRUD", "JDBC")
+Rel(home_management, home_management_db, "CRUD", "JDBC")
 Rel(device_manager, device_manager_db, "Состояния устройств", "JDBC")
 Rel(telemetry_service, telemetry_db, "Телеметрия", "CRUD")
 Rel(scenarios_service, scenarios_db, "Правила сценариев", "JDBC")
+Rel(sensor_management, sensor_management_db, "Связь датчиков с их устройствами управления", "JDBC")
 
 @enduml

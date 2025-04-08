@@ -1,0 +1,116 @@
+@startuml ScenariosServiceSequenceDiagram
+
+participant "API Gateway" as api_gateway
+participant "Scenario In\nController" as scenario_in
+participant "Scenario Service" as scenario_service
+participant "Scenario Repository" as scenario_repo
+participant "Scenarios DB" as scenarios_db
+participant "Scenario Out\nController" as scenario_out
+participant "Kafka Producer" as kafka_producer
+participant "Kafka" as kafka
+
+== Создание нового сценария ==
+
+api_gateway -> scenario_in : POST /scenario (Данные сценария)
+activate scenario_in
+
+scenario_in -> scenario_service : Создать сценарий
+activate scenario_service
+
+scenario_service -> scenario_repo : Сохранить сценарий
+activate scenario_repo
+scenario_repo -> scenarios_db : INSERT
+activate scenarios_db
+scenarios_db --> scenario_repo : Успешно
+deactivate scenarios_db
+scenario_repo --> scenario_service : Сценарий создан
+deactivate scenario_repo
+
+scenario_service --> scenario_in : 201 Created
+deactivate scenario_service
+scenario_in --> api_gateway : HTTP Response
+deactivate scenario_in
+
+== Добавление действия в сценарий ==
+
+api_gateway -> scenario_in : POST /scenario/{id}/action (Последовательность действия устройства)
+activate scenario_in
+
+scenario_in -> scenario_service : Добавить последовательность
+activate scenario_service
+
+scenario_service -> scenario_repo : Обновить последовательность
+activate scenario_repo
+scenario_repo -> scenarios_db : UPDATE (добавить последовательность)
+activate scenarios_db
+scenarios_db --> scenario_repo : Успешно
+deactivate scenarios_db
+scenario_repo --> scenario_service : Последовательность добавлена
+deactivate scenario_repo
+
+scenario_service --> scenario_in : 200 OK
+deactivate scenario_service
+scenario_in --> api_gateway : HTTP Response
+deactivate scenario_in
+
+== Запуск сценария ==
+
+api_gateway -> scenario_in : POST /scenario/{id}/execute
+activate scenario_in
+
+scenario_in -> scenario_service : Выполнить сценарий
+activate scenario_service
+
+scenario_service -> scenario_repo : Получить сценарий
+activate scenario_repo
+scenario_repo -> scenarios_db : SELECT
+activate scenarios_db
+scenarios_db --> scenario_repo : Данные сценария
+deactivate scenarios_db
+scenario_repo --> scenario_service : Сценарий получен
+deactivate scenario_repo
+
+alt Есть связанные устройства
+    scenario_service -> scenario_out : Подготовить ChangeStateFromScenario
+    activate scenario_out
+    scenario_out -> kafka_producer : Отправить событие
+    activate kafka_producer
+    kafka_producer -> kafka : ChangeStateFromScenario
+    activate kafka
+    deactivate kafka
+    kafka_producer --> scenario_out : Событие отправлено
+    deactivate kafka_producer
+    scenario_out --> scenario_service : Событие отправлено
+    deactivate scenario_out
+else Нет устройств
+    scenario_service --> scenario_in : 204 No Content
+end
+
+scenario_service --> scenario_in : 200 OK
+deactivate scenario_service
+scenario_in --> api_gateway : HTTP Response
+deactivate scenario_in
+
+== Удаление сценария ==
+
+api_gateway -> scenario_in : DELETE /scenario/{id}
+activate scenario_in
+
+scenario_in -> scenario_service : Удалить сценарий
+activate scenario_service
+
+scenario_service -> scenario_repo : Удалить запись
+activate scenario_repo
+scenario_repo -> scenarios_db : DELETE
+activate scenarios_db
+scenarios_db --> scenario_repo : Успешно
+deactivate scenarios_db
+scenario_repo --> scenario_service : Сценарий удален
+deactivate scenario_repo
+
+scenario_service --> scenario_in : 204 No Content
+deactivate scenario_service
+scenario_in --> api_gateway : HTTP Response
+deactivate scenario_in
+
+@enduml

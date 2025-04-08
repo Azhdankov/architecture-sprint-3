@@ -1,0 +1,114 @@
+@startuml SensorManagementSequenceDiagram
+
+participant "API Gateway" as api_gateway
+participant "Sensor In\nController" as sensor_in
+participant "Sensor Service" as sensor_service
+participant "Sensor Repository" as sensor_repo
+participant "Sensor DB" as sensor_db
+participant "Sensor Out\nController" as sensor_out
+participant "Kafka Producer" as kafka_producer
+participant "Kafka" as kafka
+
+== Добавление нового датчика ==
+
+api_gateway -> sensor_in : POST /sensor (Данные датчика)
+activate sensor_in
+
+sensor_in -> sensor_service : Создать датчик
+activate sensor_service
+
+sensor_service -> sensor_repo : Сохранить датчик
+activate sensor_repo
+sensor_repo -> sensor_db : INSERT
+activate sensor_db
+sensor_db --> sensor_repo : Успешно
+deactivate sensor_db
+sensor_repo --> sensor_service : Датчик создан
+deactivate sensor_repo
+
+sensor_service --> sensor_in : 201 Created
+deactivate sensor_service
+sensor_in --> api_gateway : HTTP Response
+deactivate sensor_in
+
+== Обновление состояния датчика ==
+
+api_gateway -> sensor_in : PUT /sensor/{id} (Новое состояние)
+activate sensor_in
+
+sensor_in -> sensor_service : Обновить состояние
+activate sensor_service
+
+sensor_service -> sensor_repo : Обновить запись
+activate sensor_repo
+sensor_repo -> sensor_db : UPDATE
+activate sensor_db
+sensor_db --> sensor_repo : Успешно
+deactivate sensor_db
+sensor_repo --> sensor_service : Состояние обновлено
+deactivate sensor_repo
+
+sensor_service -> sensor_out : Подготовить ChangingState
+activate sensor_out
+sensor_out -> kafka_producer : Отправить событие
+activate kafka_producer
+kafka_producer -> kafka : ChangingState
+activate kafka
+deactivate kafka
+kafka_producer --> sensor_out : Событие отправлено
+deactivate kafka_producer
+sensor_out --> sensor_service : Событие отправлено
+deactivate sensor_out
+
+sensor_service --> sensor_in : 200 OK
+deactivate sensor_service
+sensor_in --> api_gateway : HTTP Response
+deactivate sensor_in
+
+== Удаление датчика ==
+
+api_gateway -> sensor_in : DELETE /sensor/{id}
+activate sensor_in
+
+sensor_in -> sensor_service : Удалить датчик
+activate sensor_service
+
+sensor_service -> sensor_repo : Удалить запись
+activate sensor_repo
+sensor_repo -> sensor_db : DELETE
+activate sensor_db
+sensor_db --> sensor_repo : Успешно
+deactivate sensor_db
+sensor_repo --> sensor_service : Датчик удален
+deactivate sensor_repo
+
+sensor_service --> sensor_in : 204 No Content
+deactivate sensor_service
+sensor_in --> api_gateway : HTTP Response
+deactivate sensor_in
+
+== Обработка ошибки при создании ==
+
+alt Ошибка создания
+api_gateway -> sensor_in : POST /sensor (Данные датчика)
+activate sensor_in
+
+sensor_in -> sensor_service : Создать датчик
+activate sensor_service
+
+sensor_service -> sensor_repo : Сохранить датчик
+activate sensor_repo
+sensor_repo -> sensor_db : INSERT
+activate sensor_db
+sensor_db --> sensor_repo : Ошибка
+deactivate sensor_db
+sensor_repo --> sensor_service : Ошибка БД
+deactivate sensor_repo
+
+sensor_service --> sensor_in : Ошибка 500
+deactivate sensor_service
+sensor_in --> api_gateway : HTTP Error
+deactivate sensor_in
+end
+
+@enduml

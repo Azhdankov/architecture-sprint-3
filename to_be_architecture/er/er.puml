@@ -1,61 +1,74 @@
-@startuml WarmHouseERDiagram
+@startuml WarmHouseDataModel
+
+class User {
+    + UUID id <<PK>>
+    + String email
+    + String name
+    + String surname
+    + String phoneNumber
+    + String contractNumber
+    + String managerId
+}
+
+class Home {
+    + UUID id <<PK>>
+    + UUID homeId
+    + UUID customerId <<FK>>
+    + String hubIp
+}
+
+class Device {
+    + UUID id <<PK>>
+    + UUID homeId <<FK>>
+    + String type
+    + State state
+    + Boolean isAvailable
+    + String hubIp
+}
+
+class Sensor {
+    + UUID id <<PK>>
+    + UUID deviceId <<FK>>
+}
+
+class Telemetry {
+    + UUID id <<PK>>
+    + String state
+}
+
+class Scenario {
+    + UUID id <<PK>>
+    + UUID homeId <<FK>>
+    + String description
+    + String name
+}
+
+class ScenarioDevice {
+    + UUID id <<PK>>
+    + UUID scenarioId <<FK>>
+    + UUID deviceId <<FK>>
+    + SequenceAction sequenceAction
+}
+
+User "1" -- "0..*" Home : "has"
+Home "1" -- "0..*" Device : "contains"
+Device "1" -- "0..*" Sensor : "has "
+Device "1" -- "0..*" Telemetry : "produces"
+Home "1" -- "0..*" Scenario : "has"
+Scenario "1" -- "0..*" ScenarioDevice : "controls"
+ScenarioDevice "1" -- "1" Device : "manages"
 
 hide circle
 skinparam linetype ortho
-
-entity Device {
-  * id : UUID <<PK>>
-  --
-  * type : String
-  * customerId : UUID
-  * isSensor : Boolean
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor White
+    ArrowColor #2C3E50
+    BorderColor #2C3E50
 }
-
-entity DeviceState {
-  * id : UUID <<PK>>
-  --
-  * deviceId : UUID <<FK>>
-  * type : String
-  * state : State
-  * isOn : Boolean
+skinparam arrow {
+    Color #2C3E50
+    Thickness 2
 }
-
-entity Telemetry {
-  * deviceId : UUID
-  --
-  * state : State
-  * timestamp : DateTime
-}
-
-entity UserScenario {
-  * id : UUID <<PK>>
-  --
-  * customerId : UUID
-  * description : String
-  * isActive : Boolean
-}
-
-entity RelationDevices {
-  * id : UUID <<PK>>
-  --
-  * deviceId : UUID <<FK>>
-  * scenarioId : UUID <<FK>>
-}
-
-Device ||--o| DeviceState
-Device ||--o| Telemetry
-Device ||--o{ RelationDevices
-UserScenario |o--o{ RelationDevices
-
-' Нотации
-note right of DeviceState::deviceId
-  One-to-one or one-to-zero relationship
-  with Device.id
-end note
-
-note right of Telemetry::deviceId
-  One-to-one or one-to-zero relationship
-  with Device.id
-end note
 
 @enduml

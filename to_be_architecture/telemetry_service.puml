@@ -3,13 +3,10 @@
 
 System_Boundary(telemetry_boundary, "Телеметрия") {
     ContainerDb(telemetry_db, "Telemetry DB", "Redis", "Хранит текущие показания")
-    ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Взаимодействие между микросервисами")
 
     Component(telemetry_in, "Telemetry in controller", "Spring REST Controller", "Принимает/отдаёт данные от датчиков")
-    Component(telemetry_out, "Telemetry out controller", "Component", "Коннекторы к внешним системам")
     Component(telemetry_service, "Telemetry Service", "Spring Service", "Обработка телеметрии")
     Component(telemetry_repository, "Telemetry Repository", "Spring Data Redis", "Работа с Redis")
-    Component(kafka_producer, "Kafka Producer", "Spring Kafka", "Отправка событий")
 }
 
 Container(api_gateway, "API Gateway", "Любой, с чем работала команда разработки", "Единая точка входа")
@@ -18,8 +15,5 @@ Rel(api_gateway, telemetry_in, "POST/GET", "HTTP/REST/JSON")
 Rel(telemetry_in, telemetry_service, "Обработка телеметрии", "Java")
 Rel(telemetry_service, telemetry_repository, "Запись/чтение из хранилища", "Redis Template")
 Rel(telemetry_repository, telemetry_db, "SET/GET", "Redis Protocol")
-Rel(telemetry_service, telemetry_out, "Вызов создания события для kafka", "Java")
-Rel(telemetry_out, kafka_producer, "Отправить событие", "Java")
-Rel(kafka_producer, kafka, "Событие: telemetry_management", "Java")
 
 @enduml

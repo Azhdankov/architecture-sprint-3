@@ -3,7 +3,6 @@
 
 System_Boundary(scenarios_boundary, "Пользовательские сценарии") {
     ContainerDb(scenarios_db, "Scenarios DB", "PostgreSQL", "Хранит правила сценариев")
-    ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Взаимодействие между микросервисами")
 
     Component(scenario_in, "Scenario in controller", "Spring REST Controller", "Принимает HTTP-запросы от API Gateway")
     Component(scenario_out, "Scenario out controller", "Component", "Коннекторы к внешним системам")
@@ -12,15 +11,16 @@ System_Boundary(scenarios_boundary, "Пользовательские сцена
     Component(kafka_producer, "Kafka Producer", "Spring Kafka", "Отправка событий для устройств")
 }
 
+ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Взаимодействие между микросервисами")
 Container(api_gateway, "API Gateway", "Любой, с чем работала команда разработки", "Единая точка входа")
 
 Rel(api_gateway, scenario_in, "POST/PUT/GET/DELETE", "HTTP/REST/JSON")
 
-Rel(scenario_in, scenario_service, "Создание/запуск/обновление сценария", "Java")
-Rel(scenario_service, scenario_repository, "Работа со сценариями", "JPA/Hibernate")
+Rel(scenario_in, scenario_service, "Создание/запуск/обновление сценария, добавление последовательности действий для устройств", "Java")
+Rel(scenario_service, scenario_repository, "Сохранение/чтение метаданных", "JPA/Hibernate")
 Rel(scenario_repository, scenarios_db, "INSERT/UPDATE/DELETE операции", "JDBC")
 Rel(scenario_service, scenario_out, "Вызов создания события", "Java")
 Rel(scenario_out, kafka_producer, "Отправить событие", "Java")
-Rel(kafka_producer, kafka, "Событие: scenario_triggered", "Kafka Protocol")
+Rel(kafka_producer, kafka, "Отправка события", "Kafka Protocol")
 
 @enduml

@@ -1,0 +1,74 @@
+@startuml HomeManagementSequenceDiagram
+actor User as user
+participant "API Gateway" as api_gateway
+participant "Home In Controller" as home_in
+participant "Home Service" as home_service
+participant "Home Repository" as home_repo
+participant "Home DB" as home_db
+participant "Home Out Controller" as home_out
+participant "Kafka Producer" as kafka_producer
+participant "Kafka" as kafka
+
+== Добавление нового дома ==
+
+user -> api_gateway : POST /home (Данные дома)
+activate api_gateway
+api_gateway -> home_in : HTTP/REST
+activate home_in
+
+home_in -> home_service : Создать дом
+activate home_service
+
+home_service -> home_repo : Сохранить дом
+activate home_repo
+home_repo -> home_db : INSERT
+activate home_db
+home_db --> home_repo : Успешно
+deactivate home_db
+home_repo --> home_service : Дом создан
+deactivate home_repo
+
+home_service --> home_in : 201 Created
+deactivate home_service
+home_in --> api_gateway : HTTP Response
+deactivate home_in
+api_gateway --> user : Успешное создание
+deactivate api_gateway
+
+== Удаление дома ==
+
+user -> api_gateway : DELETE /home/{homeId}
+activate api_gateway
+api_gateway -> home_in : HTTP/REST
+activate home_in
+
+home_in -> home_service : Удалить дом
+activate home_service
+
+home_service -> home_repo : Удалить дом
+activate home_repo
+home_repo -> home_db : DELETE
+activate home_db
+home_db --> home_repo : Успешно
+deactivate home_db
+home_repo --> home_service : Дом удален
+deactivate home_repo
+
+home_service -> home_out : Подготовить событие удаления
+activate home_out
+home_out -> kafka_producer : Отправить событие "Дом удален"
+activate kafka_producer
+kafka_producer -> kafka : Событие "дом удалён"
+kafka_producer --> home_out : Событие отправлено
+deactivate kafka_producer
+home_out --> home_service : Событие отправлено
+deactivate home_out
+
+home_service --> home_in : 204 No Content
+deactivate home_service
+home_in --> api_gateway : HTTP Response
+deactivate home_in
+api_gateway --> user : Успешное удаление
+deactivate api_gateway
+
+@enduml
