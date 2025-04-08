@@ -65,13 +65,13 @@
 
 **Диаграмма контекста**
 
-- system_context.puml
+- to_be_architecture/system_context.puml
 
 **Диаграмма контейнеров (Containers)**
 
-- containers.puml
+- to_be_architecture/containers.puml
 
-**Диаграмма компонентов (Components)**
+**Диаграмма компонентов (Components) общая папка to_be_architecture/**
 
 - device_manager.puml
 - home_management.puml
@@ -81,11 +81,11 @@
 
 **Документация по сценариям**
 
-- папка docs
+- папка to_be_architecture/docs
 
 **Диаграмма кода (Code)**
 
-- device_manager_sequence_diagram.puml
+- Папка to_be_architecture/uml
 
 # Задание 3. Разработка ER-диаграммы
 
